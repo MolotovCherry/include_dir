@@ -13,6 +13,40 @@ use std::{
     time::SystemTime,
 };
 
+/// Optionally embed the contents of a directory in your crate.
+#[proc_macro]
+pub fn option_include_dir(input: TokenStream) -> TokenStream {
+    let tokens: Vec<_> = input.into_iter().collect();
+
+    let path = match tokens.as_slice() {
+        [TokenTree::Literal(lit)] => unwrap_string_literal(lit),
+        _ => panic!("This macro only accepts a single, non-empty string argument"),
+    };
+
+    let path = resolve_path(&path, get_env);
+
+    if let Ok(path) = path {
+        if !path.exists() {
+            return quote! {
+                None
+            }
+            .into();
+        }
+
+        let results = expand_dir(&path, &path);
+
+        quote! {
+            Some(#results)
+        }
+        .into()
+    } else {
+        quote! {
+            None
+        }
+        .into()
+    }
+}
+
 /// Embed the contents of a directory in your crate.
 #[proc_macro]
 pub fn include_dir(input: TokenStream) -> TokenStream {
